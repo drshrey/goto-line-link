@@ -1,6 +1,7 @@
 import { relative } from 'path'
 import * as vscode from 'vscode'
 const fs = require('fs')
+const ini = require('ini')
 
 interface GetGithubLineInput {
 	currentFile: string | undefined;
@@ -9,9 +10,32 @@ interface GetGithubLineInput {
 }
 
 export function activate(context: vscode.ExtensionContext) {
-	const getCurrentFile = (): string | undefined => {
+	const getCurrentFile = (dotGitFolderPath?: string): string | undefined => {
 		// get the current file the user has currently opened and is viewing
-		return vscode.window.activeTextEditor?.document.fileName.toString()
+		let currFile = vscode.window.activeTextEditor?.document.fileName.toString()
+		
+		
+		// get name of repo
+		const config = ini.parse(fs.readFileSync(dotGitFolderPath + '/config', 'utf8'))
+		let repoUrlSlashSplits = config['remote "origin"'].url.split('/')
+		const repoName = repoUrlSlashSplits[repoUrlSlashSplits.length - 1]
+		let currFileSplits = currFile?.split('/')
+
+		// split on '/' 
+		let repoNameIdx = 0
+		currFileSplits?.forEach((folder, idx) => {
+			console.log(folder, repoName, idx)
+			if(folder === repoName) {
+				repoNameIdx = idx
+				return
+			}
+		})
+
+		// remove all items before the element, inclusive
+		currFileSplits = currFileSplits?.slice(repoNameIdx+1, currFileSplits?.length)
+		console.log('after', currFile)
+		// combine the remaining with a '/'
+		return currFileSplits?.join('/')
 	}
 
 	const getDotGitFolderPath = (): string | undefined => {
@@ -42,41 +66,47 @@ export function activate(context: vscode.ExtensionContext) {
 	}
 
 	const getCurrentLine = (): number | undefined => { 
-		return vscode.window.activeTextEditor?.selection.active.line
+		const line = vscode.window.activeTextEditor?.selection.active.line
+		if(line){
+			return line + 1
+		}
+
+		return undefined
 	}
 
 	const getCurrentCommit = (dotGitFolderPath?: string): string | undefined => {
 		// get file path HEAD referencing
 		const headData = fs.readFileSync(dotGitFolderPath + '/HEAD', 'utf8')
 		// read file path
-		console.log('headdata', headData)
-		const commitshaFilepath = headData.split(": ")[1]
-		console.log('commitsha filepath', dotGitFolderPath + '/' + commitshaFilepath)
-		const commitshaData = fs.readFilesync(dotGitFolderPath + '/' + commitshaFilepath, 'utf8')
-		console.log('commitsha', commitshaData)
-		return commitshaData
+		const commitshaFilepath = headData.split(": ")[1].trim()
+		const commitshaData = fs.readFileSync(dotGitFolderPath + '/' + commitshaFilepath, 'utf8')
+		return commitshaData.trim()
 	}
 
 	const getCurrentBranch = (dotGitFolderPath?: string): string | undefined => {
 		// read branch in HEAD
-		return undefined
+		const headData = fs.readFileSync(dotGitFolderPath + '/HEAD', 'utf8')
+		// read file path
+		const commitshaFilepath = headData.split(": ")[1].trim()		
+		const slashSplits: string[] = commitshaFilepath.split("/")
+		return slashSplits[slashSplits.length-1]
 	}
 
 	const getRepoUrl = (dotGitFolderPath?: string): string | undefined => {
-		// read branch 
-		return undefined
+		const config = ini.parse(fs.readFileSync(dotGitFolderPath + '/config', 'utf8'))
+		console.log(config['remote "origin"'])
+		return config['remote "origin"'].url
 	}
 
-	const generateGithubLink = (file: string, commitSha: string, branch: string, repoUrl: string): string => {
-		// read 
-		return ''
+	const generateGithubLink = (file: string, commitSha: string, branch: string, repoUrl: string, line: number): string => {
+		return `${repoUrl}/blob/${commitSha}/${file}#L${line}`
 	}
 
-
-	let disposable = vscode.commands.registerCommand('one-line.getGithubLine', () => {
+	const getGithubLink = (): string | undefined => {
+		const dotGitFolderPath = getDotGitFolderPath()
 		const inputs: GetGithubLineInput = {
-			currentFile: getCurrentFile(),
-			dotGitFolderPath: getDotGitFolderPath(),
+			currentFile: getCurrentFile(dotGitFolderPath),
+			dotGitFolderPath: dotGitFolderPath,
 			currentLine: getCurrentLine()
 		}
 
@@ -85,18 +115,38 @@ export function activate(context: vscode.ExtensionContext) {
 		const commit = getCurrentCommit(inputs.dotGitFolderPath)
 		const branch = getCurrentBranch(inputs.dotGitFolderPath)
 		const repoUrl = getRepoUrl(inputs.dotGitFolderPath)
+		let githubLink = undefined
+		if(inputs.currentFile && commit && branch && repoUrl && inputs.currentLine) {
+			return generateGithubLink(inputs.currentFile, commit, branch, repoUrl, inputs.currentLine)
+		} else {
+			return undefined
+		}
+	}
 
-		console.log(inputs.currentFile, commit, branch, repoUrl)
 
+	const getGithubLine = vscode.commands.registerCommand('one-line.getGithubLine', () => {
+		const githubLink = getGithubLink()
 
-		if(inputs.currentFile && commit && branch && repoUrl) {
-			vscode.window.showInformationMessage(generateGithubLink(inputs.currentFile, commit, branch, repoUrl))
+		if(githubLink){
+			vscode.env.clipboard.writeText(githubLink)
+			vscode.window.showInformationMessage('Link to line copied to clipboard!')
 		} else {
 			vscode.window.showInformationMessage("Something went wrong")
 		}
 	});
 
-	context.subscriptions.push(disposable);
+	const gotoGithubLine = vscode.commands.registerCommand('one-line.gotoGithubLine', () => {
+		const githubLink = getGithubLink()
+
+		if(githubLink){
+			vscode.env.openExternal(vscode.Uri.parse(githubLink))
+		} else {
+			vscode.window.showInformationMessage("Something went wrong")
+		}
+	});	
+
+	context.subscriptions.push(getGithubLine)
+	context.subscriptions.push(gotoGithubLine)
 }
 
 // this method is called when your extension is deactivated
