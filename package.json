@@ -4,6 +4,7 @@
 	"description": "",
 	"publisher": "colo-labs",
 	"version": "1.0.0",
+	"repository": "https://github.com/drshrey/goto-line-link",
 	"engines": {
 		"vscode": "^1.51.0"
 	},
