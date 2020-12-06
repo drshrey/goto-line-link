@@ -24,8 +24,9 @@ TODO
 
 # Assumptions
 
-TODO
+- You are working out of a directory in VSCode that matches the name of the repository
+- Your root directory contains the appropriate .git folder.
 
-# Development
+# Known Issues
 
-TODO
+- `Goto link` is broken for repositories that have the git@... format in the .git/config file 
