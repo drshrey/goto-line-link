@@ -1,6 +1,6 @@
 {
-	"name": "one-line",
-	"displayName": "one-line",
+	"name": "goto-line-link",
+	"displayName": "goto-line-link",
 	"description": "",
 	"version": "0.0.1",
 	"engines": {
@@ -10,19 +10,19 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:one-line.getGithubLine",
-		"onCommand:one-line.gotoGithubLine"
+		"onCommand:goto-line-link.getGithubLine",
+		"onCommand:goto-line-link.gotoGithubLine"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
 		"commands": [
 			{
-				"command": "one-line.getGithubLine",
+				"command": "goto-line-link.getGithubLine",
 				"title": "Get github link to current line"
 			},
 			{
-				"command": "one-line.gotoGithubLine",
-				"title": "Go to github link of current line"
+				"command": "goto-line-link.gotoGithubLine",
+				"title": "Goto github link of current line"
 			}			
 		]
 	},

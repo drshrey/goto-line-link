@@ -124,7 +124,7 @@ export function activate(context: vscode.ExtensionContext) {
 	}
 
 
-	const getGithubLine = vscode.commands.registerCommand('one-line.getGithubLine', () => {
+	const getGithubLine = vscode.commands.registerCommand('goto-line-link.getGithubLine', () => {
 		const githubLink = getGithubLink()
 
 		if(githubLink){
@@ -135,7 +135,7 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
-	const gotoGithubLine = vscode.commands.registerCommand('one-line.gotoGithubLine', () => {
+	const gotoGithubLine = vscode.commands.registerCommand('goto-line-link.gotoGithubLine', () => {
 		const githubLink = getGithubLink()
 
 		if(githubLink){
