@@ -18,11 +18,11 @@
 		"commands": [
 			{
 				"command": "goto-line-link.getGithubLine",
-				"title": "Get github link to current line"
+				"title": "Get link to current line"
 			},
 			{
 				"command": "goto-line-link.gotoGithubLine",
-				"title": "Goto github link of current line"
+				"title": "Goto link of current line"
 			}			
 		]
 	},
