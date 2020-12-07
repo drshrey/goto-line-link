@@ -2,11 +2,21 @@ import { relative } from 'path'
 import * as vscode from 'vscode'
 const fs = require('fs')
 const ini = require('ini')
+const gh = require('parse-github-url')
 
 interface GetGithubLineInput {
 	currentFile: string | undefined;
 	dotGitFolderPath: string | undefined;
 	currentLine: number | undefined;
+}
+
+interface RepoInfo {
+	href: string;
+	host: string;
+	branch: string;
+	owner: string;
+	repo: string;
+	name: string;
 }
 
 export function activate(context: vscode.ExtensionContext) {
@@ -17,8 +27,10 @@ export function activate(context: vscode.ExtensionContext) {
 		
 		// get name of repo
 		const config = ini.parse(fs.readFileSync(dotGitFolderPath + '/config', 'utf8'))
-		let repoUrlSlashSplits = config['remote "origin"'].url.split('/')
-		const repoName = repoUrlSlashSplits[repoUrlSlashSplits.length - 1]
+		// call getRepoUrl and get structured data
+		// format url with slashes 
+		const repoInfo = getRepoInfo(dotGitFolderPath)
+		const repoName = repoInfo.name
 		let currFileSplits = currFile?.split('/')
 
 		// split on '/' 
@@ -33,7 +45,6 @@ export function activate(context: vscode.ExtensionContext) {
 
 		// remove all items before the element, inclusive
 		currFileSplits = currFileSplits?.slice(repoNameIdx+1, currFileSplits?.length)
-		console.log('after', currFile)
 		// combine the remaining with a '/'
 		return currFileSplits?.join('/')
 	}
@@ -92,14 +103,14 @@ export function activate(context: vscode.ExtensionContext) {
 		return slashSplits[slashSplits.length-1]
 	}
 
-	const getRepoUrl = (dotGitFolderPath?: string): string | undefined => {
-		const config = ini.parse(fs.readFileSync(dotGitFolderPath + '/config', 'utf8'))
-		console.log(config['remote "origin"'])
-		return config['remote "origin"'].url
+	const getRepoInfo = (dotGitFolderPath?: string): RepoInfo => {
+		const config = ini.parse(fs.readFileSync(dotGitFolderPath + '/config', 'utf8'))	
+		return gh(config['remote "origin"'].url)
 	}
 
-	const generateGithubLink = (file: string, commitSha: string, branch: string, repoUrl: string, line: number): string => {
-		return `${repoUrl}/blob/${commitSha}/${file}#L${line}`
+	const generateGithubLink = (file: string, commitSha: string, repoInfo: RepoInfo, line: number): string => {
+		// format https link for repoUrl here
+		return `https://${repoInfo.host}/${repoInfo.repo}/blob/${commitSha}/${file}#L${line}`
 	}
 
 	const getGithubLink = (): string | undefined => {
@@ -110,14 +121,10 @@ export function activate(context: vscode.ExtensionContext) {
 			currentLine: getCurrentLine()
 		}
 
-		console.log(inputs)
-
 		const commit = getCurrentCommit(inputs.dotGitFolderPath)
-		const branch = getCurrentBranch(inputs.dotGitFolderPath)
-		const repoUrl = getRepoUrl(inputs.dotGitFolderPath)
-		let githubLink = undefined
-		if(inputs.currentFile && commit && branch && repoUrl && inputs.currentLine) {
-			return generateGithubLink(inputs.currentFile, commit, branch, repoUrl, inputs.currentLine)
+		const repoInfo = getRepoInfo(inputs.dotGitFolderPath)
+		if(inputs.currentFile && commit && repoInfo && inputs.currentLine) {
+			return generateGithubLink(inputs.currentFile, commit, repoInfo, inputs.currentLine)
 		} else {
 			return undefined
 		}
